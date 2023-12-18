@@ -17,6 +17,7 @@ import { ClockLoader } from "react-spinners";
 import sucess from "../../../public/assets/images/checked.png";
 import { MdErrorOutline } from "react-icons/md";
 import { Link } from "react-router-dom";
+import Image from "next/image";
 
 const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
   const [selectedOption, setSelectedOption] = useState(1);
@@ -31,16 +32,22 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
     sessionethProvider,
     userinfo,
   } = useWeb3AuthSigner();
-  //console.log(userinfo);
+  console.log("1", accountAddress);
+  console.log("2", sessionKeyProvider);
+  console.log("3", usdtbalace);
+  console.log("4", sessionethProvider);
+  console.log("5", userinfo);
+
   const [titleText, setTitleText] = useState("USDT");
   const [titleText1, setTitleText1] = useState("ETH");
-  const [selectedImg, setSelectedImg] = useState(UsdtIcon);
-  const [selectedImg1, setSelectedImg1] = useState(EthIcon);
+  const [selectedImage, setSelectedImage] = useState(UsdtIcon);
+  const [selectedImage1, setSelectedImage1] = useState(EthIcon);
 
   const [tokenname, setTOkenname] = useState(titleText);
   const [hash, setHash] = useState("");
 
   const { data } = useWallet();
+  console.log("data-->", data.totalBalance);
   const [isChecked, setChecked] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [errorbalace, setErrorbalace] = useState(false);
@@ -243,9 +250,9 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
       console.log("ethvalue-->", amount);
       try {
         setResponsepopup(true);
-        const { hash } = await sessionethProvider.sendUserOperation({
+        const { hash } = await sessionKeyProvider.sendUserOperation({
           target: to,
-          data: "0x",
+          data: pad("0x", { size: 4 }),
           value: amount,
         });
         // const { hash } = await sessionethProvider.sendUserOperation({
@@ -256,7 +263,7 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
         //     args: [to, amount],
         //   }),
         // });
-        const hash1 = await sessionethProvider.waitForUserOperationTransaction(
+        const hash1 = await sessionKeyProvider.waitForUserOperationTransaction(
           hash
         );
 
@@ -354,88 +361,108 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
             </button>
           </div>
           <div className="gittu-modal-body">
-            <div className="mb-20">
-              <div className="d-flex flex-row justify-content-between align-items-center">
-                <div>
-                  <h5 className="ff-outfit fw-600 text-white text-uppercase gap-1 flex ">
-                    Balance : {selectedOption === 1 ? usdtbalace : ethbalace}
-                    <span>{tokenname}</span>
-                  </h5>
+            {accountAddress &&
+            sessionKeyProvider &&
+            ethprice &&
+            setEthprice &&
+            setOpenModule &&
+            usdtbalace &&
+            sessionethProvider &&
+            userinfo ? (
+              <>
+                <div className="mb-20">
+                  <div className="d-flex flex-row justify-content-between align-items-center">
+                    <div>
+                      <h5 className="ff-outfit fw-600 text-white text-uppercase gap-1 flex ">
+                        Balance :{" "}
+                        {selectedOption === 1 ? usdtbalace : ethbalace}
+                        <span>{tokenname}</span>
+                      </h5>
+                    </div>
+                    <div className="" onClick={openDeposite}>
+                      <button className=" bg-slate-500 bg-opacity-25 md:px-10 px-3 py-2 md:text-xl text-sm rounded-full text-white">
+                        Deposit
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="" onClick={openDeposite}>
-                  <button className=" bg-slate-500 bg-opacity-25 md:px-10 px-3 py-2 md:text-xl text-sm rounded-full text-white">
-                    Deposit
-                  </button>
+                <div className="input-group">
+                  <div className="flex justify-between items-center gap-2  w-full my-2">
+                    {/* one */}
+                    <div
+                      className={`w-full flex justify-center items-center gap-2 border-2 rounded p-2 border-[#ffffff] border-opacity-40 bg-opacity-10 cursor-pointer text-white md:text-base text-xs  ${
+                        selectedOption === 1 ? "border-opacity-90" : ""
+                      }`}
+                      onClick={() => handleOptionClick(1, titleText)}
+                    >
+                      {/* <StyledButton> */}
+                      <Image
+                        src={selectedImage}
+                        alt="icon"
+                        className="md:h-8 h-5"
+                      />
+                      <span>{titleText}</span>
+                      {/* </StyledButton> */}
+                    </div>
+                    {/* Two ETH*/}
+                    <div
+                      className={`w-full flex justify-center items-center gap-2 border-2 rounded p-2 border-[#ffffff] border-opacity-40 bg-opacity-10 cursor-pointer text-white md:text-base text-xs  ${
+                        selectedOption === 2 ? "border-opacity-90" : ""
+                      }`}
+                      onClick={() => handleOptionClick(2, titleText1)}
+                    >
+                      <Image
+                        src={selectedImage1}
+                        alt="icon"
+                        className="md:h-8 h-5"
+                      />
+                      <span>{titleText1}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="input-group">
-              <div className="flex justify-between items-center gap-2  w-full my-2">
-                {/* one */}
-                <div
-                  className={`w-full flex justify-center items-center gap-2 border-2 rounded p-2 border-[#ffffff] border-opacity-40 bg-opacity-10 cursor-pointer text-white md:text-base text-xs  ${
-                    selectedOption === 1 ? "border-opacity-90" : ""
-                  }`}
-                  onClick={() => handleOptionClick(1, titleText)}
-                >
-                  {/* <StyledButton> */}
-                  <img src={selectedImg} alt="icon" className="md:h-8 h-5" />
-                  <span>{titleText}</span>
-                  {/* </StyledButton> */}
+                <div className="presale-item mb-25">
+                  <h6>You Pay</h6>
+                  <div className="input-group">
+                    <input
+                      type="number"
+                      min={selectedOption === 1 ? 1000 : 1000 / ethprice}
+                      step="0.01"
+                      name="payment-amount"
+                      id="payment-amount"
+                      placeholder={
+                        selectedOption === 1 ? 1000 : 1000 / ethprice
+                      }
+                      value={ethprice && "1000" ? paymentAmount : null}
+                      onChange={handlePaymentInput}
+                    />
+                    {errorbalace && (
+                      <p className="text-sm text-red-600 px-2 ">
+                        Insufficient fund
+                      </p>
+                    )}
+                    {minbalanceerror && selectedOption === 1 && (
+                      <p className="text-sm text-red-600 px-2 ">
+                        Minimum buy value is 1000
+                      </p>
+                    )}
+                    {minbalanceerror && selectedOption === 2 && (
+                      <p className="text-sm text-red-600 px-2 ">
+                        Minimum buy value is {1000 / ethprice}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {/* Two ETH*/}
-                <div
-                  className={`w-full flex justify-center items-center gap-2 border-2 rounded p-2 border-[#ffffff] border-opacity-40 bg-opacity-10 cursor-pointer text-white md:text-base text-xs  ${
-                    selectedOption === 2 ? "border-opacity-90" : ""
-                  }`}
-                  onClick={() => handleOptionClick(2, titleText1)}
-                >
-                  <img src={selectedImg1} alt="icon" className="md:h-8 h-5" />
-                  <span>{titleText1}</span>
-                </div>
-              </div>
-            </div>
-            <div className="presale-item mb-25">
-              <h6>You Pay</h6>
-              <div className="input-group">
-                <input
-                  type="number"
-                  min={selectedOption === 1 ? 1000 : 1000 / ethprice}
-                  step="0.01"
-                  name="payment-amount"
-                  id="payment-amount"
-                  placeholder={selectedOption === 1 ? 1000 : 1000 / ethprice}
-                  value={ethprice && "1000" ? paymentAmount : null}
-                  onChange={handlePaymentInput}
-                />
-                {errorbalace && (
-                  <p className="text-sm text-red-600 px-2 ">
-                    Insufficient fund
-                  </p>
-                )}
-                {minbalanceerror && selectedOption === 1 && (
-                  <p className="text-sm text-red-600 px-2 ">
-                    Minimum buy value is 1000
-                  </p>
-                )}
-                {minbalanceerror && selectedOption === 2 && (
-                  <p className="text-sm text-red-600 px-2 ">
-                    Minimum buy value is {1000 / ethprice}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="presale-item mb-25">
-              <h6>You Receive ( {"BLOKC"} )</h6>
-              <input
-                type="text"
-                name="get-amount"
-                id="get-amount"
-                placeholder="0" // Initially set to 0
-                value={amountblokc} // Calculate and display the Get Amount
-              />
+                <div className="presale-item mb-25">
+                  <h6>You Receive ( {"BLOKC"} )</h6>
+                  <input
+                    type="text"
+                    name="get-amount"
+                    id="get-amount"
+                    placeholder="0" // Initially set to 0
+                    value={amountblokc} // Calculate and display the Get Amount
+                  />
 
-              {/* <input
+                  {/* <input
                 type="text"
                 name="get-amount"
                 id="get-amount"
@@ -446,7 +473,7 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
                     : (paymentAmount * 100 * ethprice).toFixed(2)
                 } // Calculate and display the Get Amount
               /> */}
-              {/* {selectedOption === 1 ? (
+                  {/* {selectedOption === 1 ? (
                 <input
                   type="text"
                   name="get-amount"
@@ -467,40 +494,40 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
                   value={(paymentAmount * 100 * ethprice).toFixed(2)} // Calculate and display the Get Amount
                 />
               )} */}
-            </div>
-            <ul className="token-info-list">
-              <li>
-                <div className="flex gap-1 justify-center items-center">
-                  <p> 1 BLOKC Price </p>
-                  {selectedOption === 2 ? (
-                    <span
-                      style={tooltipStyle}
-                      onMouseOver={handleMouseOver}
-                      onMouseOut={handleMouseOut}
-                    >
-                      <IoIosInformationCircleOutline />
-                      <span style={tooltipTextStyle} className="w-full">
-                        The price of ethereum comes from decentralised oracles.
-                        Check{" "}
-                        <a
-                          href="https://data.chain.link/ethereum/mainnet/crypto-usd/eth-usd"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-700 text-sm"
-                        >
-                          here.
-                        </a>
-                      </span>
-                    </span>
-                  ) : null}
                 </div>
-                <p className="flex gap-2">
-                  {selectedOption === 1 ? 0.01 : 1 / (ethprice * 100)}
-                  <span>{tokenname}</span>
-                </p>
-              </li>
-              {/* <li> */}
-              {/* <p>Total Amount</p>
+                <ul className="token-info-list">
+                  <li>
+                    <div className="flex gap-1 justify-center items-center">
+                      <p> 1 BLOKC Price </p>
+                      {selectedOption === 2 ? (
+                        <span
+                          style={tooltipStyle}
+                          onMouseOver={handleMouseOver}
+                          onMouseOut={handleMouseOut}
+                        >
+                          <IoIosInformationCircleOutline />
+                          <span style={tooltipTextStyle} className="w-full">
+                            The price of ethereum comes from decentralised
+                            oracles. Check{" "}
+                            <a
+                              href="https://data.chain.link/ethereum/mainnet/crypto-usd/eth-usd"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-700 text-sm"
+                            >
+                              here.
+                            </a>
+                          </span>
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="flex gap-2">
+                      {selectedOption === 1 ? 0.01 : 1 / (ethprice * 100)}
+                      <span>{tokenname}</span>
+                    </p>
+                  </li>
+                  {/* <li> */}
+                  {/* <p>Total Amount</p>
                 <p>
                   {selectedOption === 1
                     ? (paymentAmount * 100).toFixed(2)
@@ -508,51 +535,55 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
                     ? (paymentAmount * 100 * ethprice).toFixed(2)
                     : "calc"}
                 </p> */}
-              {/* </li> */}
-            </ul>
+                  {/* </li> */}
+                </ul>
 
-            <div>
-              <div className="flex items-center gap-2 my-3">
                 <div>
-                  <input type="checkbox" checked />
-                </div>
-                <div>
-                  I have read, understood and agree to accept{" "}
-                  <Link
-                    to="/opportunity"
-                    target="_blank"
-                    className="underline underline-offset-2 text-blue-400 border-b-2 border-blue-400"
-                  >
-                    The Opportunity
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    to="/terms-and-conditions"
-                    target="_blank"
-                    className="underline underline-offset-2 text-blue-400 border-b-2 border-blue-400"
-                  >
-                    Terms and Conditions
-                  </Link>
-                </div>
-              </div>
-
-              <div className="d-flex flex-column justify-content-center">
-                <Button
-                  variant={props.variant === "v2" ? "gadient2" : "gradient"}
-                  //onClick={buyToken}
-                  className="btn-approve "
-                  onClick={transferdata}
-                >
-                  {incheckbox ? (
-                    <div className="spinner-border h-5 w-5" role="status">
-                      <span className="sr-only"></span>
+                  <div className="flex items-center gap-2 my-3">
+                    <div>
+                      <input type="checkbox" checked />
                     </div>
-                  ) : (
-                    "Approve"
-                  )}
-                </Button>
-              </div>
-            </div>
+                    <div>
+                      I have read, understood and agree to accept{" "}
+                      <Link
+                        to="/opportunity"
+                        target="_blank"
+                        className="underline underline-offset-2 text-blue-400 border-b-2 border-blue-400"
+                      >
+                        The Opportunity
+                      </Link>{" "}
+                      and{" "}
+                      <Link
+                        to="/terms-and-conditions"
+                        target="_blank"
+                        className="underline underline-offset-2 text-blue-400 border-b-2 border-blue-400"
+                      >
+                        Terms and Conditions
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="d-flex flex-column justify-content-center">
+                    <Button
+                      variant={props.variant === "v2" ? "gadient2" : "gradient"}
+                      //onClick={buyToken}
+                      className="btn-approve "
+                      onClick={transferdata}
+                    >
+                      {incheckbox ? (
+                        <div className="spinner-border h-5 w-5" role="status">
+                          <span className="sr-only"></span>
+                        </div>
+                      ) : (
+                        "Approve"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p>Lofing</p>
+            )}
           </div>
         </div>
       </ModalWrapper>
@@ -589,7 +620,11 @@ const Modal = ({ setPpendeposit, setIsModalOpen, ...props }) => {
                     <>
                       <div className="flex flex-col gap-3 justify-center items-center mb-3">
                         <div className="flex flex-col gap-2 justify-center items-center">
-                          <img src={sucess} alt="sucessicon" className="h-12" />
+                          <Image
+                            src={sucess}
+                            alt="sucessicon"
+                            className="h-12"
+                          />
                           <p className="text-lg">Transaction Successful</p>
                         </div>
                         <div className="flex flex-col text-center">

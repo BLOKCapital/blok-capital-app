@@ -23,6 +23,7 @@ import TransakWidget from "../transak/page";
 import { useWeb3AuthSigner } from "../../context/web3-auth-signer";
 import { alchemy } from "../../utils/alchemy";
 import MeshGradModal from "../../../public/assets/images/banner/mesh-grad-1.png";
+import axios from "axios";
 // eslint-disable-next-line react/prop-types
 const PopupWrapper = styled.div`
   position: absolute;
@@ -76,31 +77,32 @@ const Banner = () => {
   const [copy, setcopy] = useState(false);
   const {
     code,
-    isConnected,
-    setOpenModule,
+    userinfo,
     setAccesscodeopen,
     accountAddress,
     setusdtbalace,
     setBlokcbalace,
     setTotalblokc,
     totalblokc,
+    setMyreferralCode,
   } = useWeb3AuthSigner();
   const modalHandle = () => {
     if (code === undefined) {
       setAccesscodeopen(true);
-    } else if (isConnected === false) {
-      setOpenModule(true);
-    } else {
-      setIsModalOpen(true);
     }
+    //} else if (isConnected === false) {
+    //  setOpenModule(true);
+    //} else {
+    //  setIsModalOpen(true);
+    //}
   };
   const [opendeposit, setPpendeposit] = useState(false);
   const [stageEnd, setStageEnd] = useState(1703916000);
   const [showPopup, setShowPopup] = useState(false);
   const [transakopen, setTransak] = useState(false);
   const [persantage, setpersentage] = useState("");
-  const blokcbuytoken = 10049960 - totalblokc;
-  const tottalblokc = 10000000;
+  //const blokcbuytoken = 10049960 - totalblokc;
+  //const tottalblokc = 10000000;
   useEffect(() => {
     if (totalblokc) {
       const totalpersantage = (
@@ -193,6 +195,37 @@ const Banner = () => {
       }, 100);
     }
   };
+
+  useEffect(() => {
+    if (accountAddress) {
+      console.log("referralCodecopy");
+      const sendApiRequest = async () => {
+        const dataToSend = {
+          wallet: accountAddress,
+          email: userinfo?.email,
+          username: userinfo?.name,
+        };
+
+        try {
+          await axios
+            .post(`http://192.168.29.207:3333/registerUser`, dataToSend)
+            .then((response) => {
+              console.log(response);
+              console.log(
+                "referralCode :",
+                response?.data?.data?.checkUser?.mycode
+              );
+              setMyreferralCode(
+                String(response?.data?.data?.checkUser?.mycode)
+              );
+            });
+        } catch (error) {
+          console.error("API registerUser Error:", error);
+        }
+      };
+      void sendApiRequest();
+    }
+  }, [accountAddress]);
 
   return (
     <>

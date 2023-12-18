@@ -6,8 +6,6 @@ import ModalWrapper from "../modal/Modal.style";
 import { CgClose } from "react-icons/cg";
 import { FcGoogle } from "react-icons/fc";
 import {
-  Web3AuthMPCCoreKit,
-  WEB3AUTH_NETWORK,
   COREKIT_STATUS,
   SubVerifierDetailsParams,
 } from "@web3auth/mpc-core-kit";
@@ -19,21 +17,28 @@ import Accesscode from "../accesscode/page";
 import clipboardCopy from "clipboard-copy";
 import { MdDone } from "react-icons/md";
 import Tokenbalance from "../tokenbalance/page";
-import ethcontractABI from "../abi/ethtransferabi.json";
 import {
   ECDSAProvider,
   getRPCProviderOwner,
   SessionKeyProvider,
   getPermissionFromABI,
 } from "@zerodev/sdk";
+import swal from "sweetalert";
 import { useWeb3AuthSigner } from "../../context/web3-auth-signer";
-import { SafeEventEmitterProvider } from "@web3auth/base";
-import Web3 from "web3";
+import { SafeEventEmitterProvider, IProvider } from "@web3auth/base";
 import { BN } from "bn.js";
 import useWallet from "../hooks/use-wallet";
 import { LocalAccountSigner } from "@alchemy/aa-core";
 import { generatePrivateKey } from "viem/accounts";
 import axios from "axios";
+
+import { tKey } from "../../tkey";
+import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
+import Web3 from "web3";
+import { WebStorageModule } from "@tkey/web-storage";
+import { ShareSerializationModule } from "@tkey/share-serialization";
+import { SecurityQuestionsModule } from "@tkey/security-questions";
+import { TorusServiceProvider } from "@tkey/service-provider-torus";
 
 interface UserData {
   accessToken: string;
@@ -58,33 +63,22 @@ interface UserData {
   version_info: string;
 }
 
-interface ImportMetaEnv {
-  VITE_API_WEB3AUTH_CLIENTID: string;
-  // Add other environment variables as needed
-}
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-
-const selectedNetwork = WEB3AUTH_NETWORK.MAINNET;
-const clientidweb3 = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENTID;
-// console.log("clientidweb3--->", clientidweb3);
-
-const coreKitInstance = new Web3AuthMPCCoreKit({
-  web3AuthClientId: clientidweb3 as string,
-  web3AuthNetwork: selectedNetwork,
-  uxMode: "popup",
-  chainConfig: {
-    chainNamespace: "eip155",
-    chainId: "0x1",
-    rpcTarget: "https://rpc.ankr.com/eth",
-    displayName: "Ethereum Mainnet",
-    blockExplorer: "https://etherscan.io",
-    ticker: "ETH",
-    tickerName: "Ethereum",
+const ethereumPrivateKeyProvider = new EthereumPrivateKeyProvider({
+  config: {
+    /*
+		pass the chain config that you want to connect with
+		all chainConfig fields are required.
+		*/
+    chainConfig: {
+      chainId: "0x1",
+      rpcTarget: "https://rpc.ankr.com/eth",
+      displayName: "Ethereum Mainnet",
+      blockExplorer: "https://etherscan.io",
+      ticker: "ETH",
+      tickerName: "Ethereum",
+    },
   },
 });
-console.log("coreKitInstance", coreKitInstance);
 
 const ConnectWalletButton: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -107,7 +101,6 @@ const ConnectWalletButton: React.FC = () => {
     accesscodeopen,
     accesscode,
     setSessionethProvider,
-    myreferralCode,
   } = useWeb3AuthSigner();
   // update env
   // console.log("accountAddress--->", accountAddress);
@@ -126,85 +119,283 @@ const ConnectWalletButton: React.FC = () => {
   const [copy, setcopy] = useState<boolean>(false);
   const [resetaccount, setResetaccount] = useState<boolean>(false);
   const name = userinfo?.name;
+  const [tKeyInitialised, setTKeyInitialised] = useState(false);
+  const [provider, setProvider] = useState<IProvider | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userInfo, setUserInfo] = useState({});
+  const [recoveryShare, setRecoveryShare] = useState<string>("");
+  const [passwordShare, setPasswordShare] = useState<string>("");
+  const [mnemonicShare, setMnemonicShare] = useState<string>("");
 
   const { data } = useWallet();
-
   useEffect(() => {
-    if (coreKitInstance) {
-      const init = async () => {
-        await coreKitInstance.init();
-
-        if (coreKitInstance.provider) {
-          setProvidercorkit(coreKitInstance.provider);
-        }
-
-        setCoreKitStatus(coreKitInstance.status);
-        console.log("coreKitInstance status:", coreKitInstance.status);
-      };
-      init();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (providercorkit) {
-      const web3 = new Web3(providercorkit);
-      setWeb3(web3);
-    }
+    const init = async () => {
+      // Initialization of Service Provider
+      try {
+        await (tKey.serviceProvider as TorusServiceProvider).init({});
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    init();
   }, []);
 
   const login = async () => {
     try {
       setIsLoading(true);
-      if (!coreKitInstance) {
-        throw new Error("initiated to login");
+      if (!tKey) {
+        throw new Error("tKey not initialized yet");
       }
-      // console.log("1");
-      const verifierConfig = {
-        subVerifierDetails: {
-          typeOfLogin: "google",
-          verifier: "blok-capital",
-          clientId: process.env.NEXT_PUBLIC_GOOGLE_ID,
-        },
-      } as SubVerifierDetailsParams;
+      // Triggering Login using Service Provider ==> opens the popup
+      const loginResponse = await (tKey.serviceProvider as any).triggerLogin({
+        typeOfLogin: "google",
+        verifier: "blok-capital",
+        clientId: process.env.NEXT_PUBLIC_GOOGLE_ID,
+      });
 
-      await coreKitInstance.loginWithOauth(verifierConfig);
+      //if (coreKitInstance.status === COREKIT_STATUS.REQUIRED_SHARE) {
+      //  console.log(
+      //    "required more shares, please enter your backup/ device factor key, or reset account unrecoverable once reset, please use it with caution]"
+      //  );
+      //  setResetaccount(true);
+      //}
 
-      if (coreKitInstance.status === COREKIT_STATUS.REQUIRED_SHARE) {
+      setUserinfo(loginResponse.userInfo);
+      console.log("userdata", loginResponse.userInfo);
+      // Initialization of tKey
+      await tKey.initialize(); // 1/2 flow
+      setTKeyInitialised(true);
+
+      var { requiredShares } = tKey.getKeyDetails();
+
+      if (requiredShares > 0) {
         console.log(
-          "required more shares, please enter your backup/ device factor key, or reset account unrecoverable once reset, please use it with caution]"
+          "Please enter your backup shares, requiredShares:",
+          requiredShares
         );
-        setResetaccount(true);
+      } else {
+        await reconstructKey();
       }
-
-      if (coreKitInstance.provider) {
-        setProvidercorkit(coreKitInstance.provider);
-        setWeb3AuthSigner(coreKitInstance.provider);
-      }
-      //setCoreKitInstance(coreKitInstance);
-      //google - tkey - w3a
-      //new-blokc-verifier //
-
-      //setOpenModuleGoogle(true);
-
-      const userdata: UserData =
-        coreKitInstance.getUserInfo() as unknown as UserData;
-      setUserinfo(userdata);
-      console.log("userdata", userdata);
-
-      //localStorage.setItem("userRole", selectedOption);
-
-      //setIsConnected(true);
-
       setsucessfullogin(true);
 
       //router.push(Routes.wallet.root);
     } catch (error) {
       console.log(error);
-      setResetaccount(true);
+      //setResetaccount(true);
+
       console.error(error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const reconstructKey = async () => {
+    try {
+      const reconstructedKey = await tKey.reconstructKey();
+      const privateKey = reconstructedKey?.privKey.toString("hex");
+
+      await ethereumPrivateKeyProvider.setupProvider(privateKey);
+      setProvider(ethereumPrivateKeyProvider);
+      setLoggedIn(true);
+      setDeviceShare();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const inputRecoveryShare = async (share: string) => {
+    try {
+      await tKey.inputShare(share);
+      await reconstructKey();
+      console.log("Recovery Share Input Successfully");
+      return;
+    } catch (error) {
+      console.log("Input Recovery Share Error:", error);
+    }
+  };
+
+  const setDeviceShare = async () => {
+    try {
+      const generateShareResult = await tKey.generateNewShare();
+      const share = await tKey.outputShareStore(
+        generateShareResult.newShareIndex
+      );
+      await (tKey.modules.webStorage as WebStorageModule).storeDeviceShare(
+        share
+      );
+      console.log("Device Share Set", JSON.stringify(share));
+    } catch (error) {
+      console.log("Error", (error as any)?.message.toString(), "error");
+    }
+  };
+
+  const getDeviceShare = async () => {
+    try {
+      const share = await (
+        tKey.modules.webStorage as WebStorageModule
+      ).getDeviceShare();
+
+      if (share) {
+        console.log(
+          "Device Share Captured Successfully across",
+          JSON.stringify(share)
+        );
+        setRecoveryShare(share.share.share.toString("hex"));
+        return share;
+      }
+      console.log("Device Share Not found");
+      return null;
+    } catch (error) {
+      console.log("Error", (error as any)?.message.toString(), "error");
+    }
+  };
+
+  const changeSecurityQuestionAndAnswer = async () => {
+    if (!tKey) {
+      console.log("tKey not initialized yet");
+      return;
+    }
+    // swal is just a pretty dialog box
+    swal("Enter password (>10 characters)", {
+      content: "input" as any,
+    }).then(async (value) => {
+      if (value.length > 10) {
+        await (
+          tKey.modules.securityQuestions as SecurityQuestionsModule
+        ).changeSecurityQuestionAndAnswer(value, "whats your password?");
+        swal(
+          "Success",
+          "Successfully changed new share with password.",
+          "success"
+        );
+        console.log("Successfully changed new share with password.");
+      } else {
+        swal("Error", "Password must be >= 11 characters", "error");
+      }
+    });
+    const keyDetails = await tKey.getKeyDetails();
+    console.log(keyDetails);
+  };
+
+  const generateNewShareWithPassword = async () => {
+    if (!tKey) {
+      console.log("tKey not initialized yet");
+      return;
+    }
+    // swal is just a pretty dialog box
+    swal("Enter password (>10 characters)", {
+      content: "input" as any,
+    }).then(async (value) => {
+      if (value.length > 10) {
+        try {
+          await (
+            tKey.modules.securityQuestions as SecurityQuestionsModule
+          ).generateNewShareWithSecurityQuestions(
+            value,
+            "whats your password?"
+          );
+          swal(
+            "Success",
+            "Successfully generated new share with password.",
+            "success"
+          );
+          console.log("Successfully generated new share with password.");
+        } catch (error) {
+          swal("Error", (error as any)?.message.toString(), "error");
+        }
+      } else {
+        swal("Error", "Password must be >= 11 characters", "error");
+      }
+    });
+  };
+
+  const RecoverPasswordShare = async (password: string) => {
+    if (!tKey) {
+      console.log("tKey not initialized yet");
+      return;
+    }
+
+    try {
+      if (password.length > 10) {
+        await (
+          tKey.modules.securityQuestions as SecurityQuestionsModule
+        ).inputShareFromSecurityQuestions(password);
+        await reconstructKey();
+        console.log("Successfully recovered new share with password.");
+      } else {
+        throw new Error("Password must be >= 11 characters");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const exportMnemonicShare = async () => {
+    try {
+      const generateShareResult = await tKey.generateNewShare();
+      const share = await tKey.outputShareStore(
+        generateShareResult.newShareIndex
+      ).share.share;
+      const mnemonic = await (
+        tKey.modules.shareSerialization as ShareSerializationModule
+      ).serialize(share, "mnemonic");
+      console.log(mnemonic);
+      return mnemonic;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const MnemonicToShareHex = async (mnemonic: string) => {
+    if (!tKey) {
+      console.log("tKey not initialized yet");
+      return;
+    }
+    try {
+      const share = await (
+        tKey.modules.shareSerialization as ShareSerializationModule
+      ).deserialize(mnemonic, "mnemonic");
+      setRecoveryShare(share.toString("hex"));
+      return share;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const keyDetails = async () => {
+    if (!tKey) {
+      console.log("tKey not initialized yet");
+      return;
+    }
+    const keyDetails = await tKey.getKeyDetails();
+    console.log(keyDetails);
+  };
+
+  const criticalResetAccount = async (): Promise<void> => {
+    // This is a critical function that should only be used for testing purposes
+    // Resetting your account means clearing all the metadata associated with it from the metadata server
+    // The key details will be deleted from our server and you will not be able to recover your account
+    if (!tKeyInitialised) {
+      throw new Error("tKeyInitialised is initialised yet");
+    }
+    await tKey.storageLayer.setMetadata({
+      privKey: tKey.serviceProvider.postboxKey,
+      input: { message: "KEY_NOT_FOUND" },
+    });
+    console.log("reset");
+    logout();
+  };
+
+  const getChainID = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const web3 = new Web3(provider as any);
+
+    // Get the connected Chain's ID
+    const chainId = (await web3.eth.getChainId()).toString(16);
+    console.log(chainId);
   };
 
   useEffect(() => {
@@ -225,10 +416,16 @@ const ConnectWalletButton: React.FC = () => {
   const logout = async () => {
     // console.log("---------------");
 
-    if (!coreKitInstance) {
-      throw new Error("coreKitInstance not found");
-    }
-    await coreKitInstance.logout();
+    //if (!coreKitInstance) {
+    //  throw new Error("coreKitInstance not found");
+    //}
+    //await coreKitInstance.logout();
+    setProvider(null);
+    setLoggedIn(false);
+    setUserInfo({});
+    console.log("logged out");
+
+    ///
     setWeb3AuthSigner(undefined);
     setOpenModule(false);
     setsucessfullogin(false);
@@ -270,52 +467,25 @@ const ConnectWalletButton: React.FC = () => {
     }
   };
 
-  const referralCodecopy = () => {
-    if (myreferralCode) {
-      void clipboardCopy(myreferralCode);
-      setcopy(true);
-      setTimeout(() => {
-        setcopy(false);
-      }, 100);
-    }
-  };
-
   const openAccount = () => {
     setOpenModule(true);
   };
 
-  const criticalResetAccount = async (): Promise<void> => {
-    // This is a critical function that should only be used for testing purposes
-    // Resetting your account means clearing all the metadata associated with it from the metadata server
-    // The key details will be deleted from our server and you will not be able to recover your account
-    if (!coreKitInstance) {
-      throw new Error("coreKitInstance is not set");
-    }
-    //@ts-ignore
-    // if (selectedNetwork === WEB3AUTH_NETWORK.MAINNET) {
-    //   throw new Error("reset account is not recommended on mainnet");
-    // }
-    await coreKitInstance.tKey.storageLayer.setMetadata({
-      privKey: new BN(coreKitInstance.metadataKey!, "hex"),
-      input: { message: "KEY_NOT_FOUND" },
-    });
-    console.log("reset");
-    setResetaccount(false);
-    setProvidercorkit(null);
-  };
-
   useEffect(() => {
-    if (web3AuthSigner) {
+    console.log("zerodev provider ");
+
+    if (provider) {
       const sessionKey = LocalAccountSigner.privateKeyToAccountSigner(
         generatePrivateKey()
       );
       const contractAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
       const contractAddresseth = "0x377Fdd37E53E5036aBeA0e8b2203AE6750812446";
       const ecdcfunction = async () => {
-        if (web3AuthSigner) {
+        console.log("zerodev provider 11 ");
+        if (provider) {
           const ecdsaProvider = await ECDSAProvider.init({
             projectId: process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID as string,
-            owner: getRPCProviderOwner(web3AuthSigner),
+            owner: getRPCProviderOwner(provider),
           });
           const address = await ecdsaProvider.getAddress();
           console.log("address-->", address);
@@ -395,7 +565,7 @@ const ConnectWalletButton: React.FC = () => {
       };
       ecdcfunction();
     }
-  }, [web3AuthSigner]);
+  }, [provider]);
 
   useEffect(() => {
     if (accountAddress) {
@@ -476,15 +646,6 @@ const ConnectWalletButton: React.FC = () => {
                           : null}
                       </h5>
                       <button onClick={notify} className="">
-                        {copy ? <MdDone size={15} /> : <LucideCopy size={15} />}
-                      </button>
-                    </div>
-                    <div className="flex justify-center items-center gap-2">
-                      <h5 className="">
-                        My Referral Code :{" "}
-                        {myreferralCode ? myreferralCode : null}
-                      </h5>
-                      <button onClick={referralCodecopy} className="">
                         {copy ? <MdDone size={15} /> : <LucideCopy size={15} />}
                       </button>
                     </div>

@@ -1,23 +1,23 @@
 /* eslint-disable */
 function getScope() {
-  return self.registration.scope
+	return self.registration.scope;
 }
 
-self.addEventListener("message", function (event) {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting()
-  }
-})
+self.addEventListener('message', function (event) {
+	if (event.data && event.data.type === 'SKIP_WAITING') {
+		self.skipWaiting();
+	}
+});
 
-self.addEventListener("fetch", function (event) {
-  try {
-    const url = new URL(event.request.url)
-    if (url.pathname.includes("redirect") && url.href.includes(getScope())) {
-      event.respondWith(
-        new Response(
-          new Blob(
-            [
-              `
+self.addEventListener('fetch', function (event) {
+	try {
+		const url = new URL(event.request.url);
+		if (url.pathname.includes('redirect') && url.href.includes(getScope())) {
+			event.respondWith(
+				new Response(
+					new Blob(
+						[
+							`
                 <!DOCTYPE html>
                 <html lang="en">
                   <head>
@@ -135,9 +135,10 @@ self.addEventListener("fetch", function (event) {
                       <h1 class="title content" id="closeText" style="display: none;">You can close this window now</h1>
                     </div>
                     <script
-                      src="https://scripts.toruswallet.io/broadcastChannel_5_0_2.js"
-                      integrity="Bu0bRAeSlh2jpBuUxKk5ivkdotaHH37cQ2XiV20EmFJmghb41D0f8xME/M1WZxFC"
-                    ></script>
+                    src="https://scripts.toruswallet.io/broadcastChannel_6_0_0.js"
+                    integrity="sha384-tWiIvEY4iDOl9h6tNeoxETpLfPxq0tgzbIXFYjok42Gu5KoDaA9uSiAk2nG6XBcp"
+                    crossorigin="anonymous"
+                  ></script>
                     <script>
                       function storageAvailable(type) {
                         var storage;
@@ -306,17 +307,17 @@ self.addEventListener("fetch", function (event) {
                     </script>
                   </body>
                 </html>
-
-                ${""}
+                                        
+                ${''}
                   `,
-            ],
-            { type: "text/html" },
-          ),
-        ),
-      )
-    }
-  } catch (error) {
-    console.log("Hello")
-    console.error(error)
-  }
-})
+						],
+						{ type: 'text/html' },
+					),
+				),
+			);
+		}
+	} catch (error) {
+		console.log('Hello');
+		console.error(error);
+	}
+});

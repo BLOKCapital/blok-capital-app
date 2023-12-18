@@ -53,6 +53,9 @@ export interface Web3AuthSignerContext {
   code: string | undefined;
   setCode: React.Dispatch<React.SetStateAction<string | undefined>>;
 
+  myreferralCode: string | undefined;
+  setMyreferralCode: React.Dispatch<React.SetStateAction<string | undefined>>;
+
   isConnected: boolean;
   setIsConnected: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -118,6 +121,9 @@ export function Web3AuthSignerProvider({
   const [blokcbalace, setBlokcbalace] = useState<number | null>(null);
   const [totalblokc, setTotalblokc] = useState<number | null>(null);
   const [transakopen, setTransak] = useState<boolean>(false);
+  const [myreferralCode, setMyreferralCode] = useState<string | undefined>(
+    undefined
+  );
   return (
     <Web3AuthSigner.Provider
       value={{
@@ -153,6 +159,8 @@ export function Web3AuthSignerProvider({
         transakopen,
         totalblokc,
         setTotalblokc,
+        myreferralCode,
+        setMyreferralCode,
       }}
     >
       {children}
